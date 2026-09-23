@@ -1,0 +1,8 @@
+build/
+output/
+benchmark_results.csv
+*.o
+*.so
+*.log
+__pycache__/
+*.pyc
