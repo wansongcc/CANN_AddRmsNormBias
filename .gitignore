@@ -1,6 +1,7 @@
 build/
 output/
 benchmark_results.csv
+.worktrees/
 *.o
 *.so
 *.log
