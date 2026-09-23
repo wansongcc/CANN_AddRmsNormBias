@@ -44,6 +44,17 @@ class BenchmarkContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate"):
             validate_result_rows([valid, dict(valid)])
 
+    def test_kernel_entry_points_and_fp32_reduction_contract(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        baseline = (ROOT / "benchmarks" / "kernel_baseline.asc").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('extern "C" void run_kernel(', optimized)
+        self.assertIn('extern "C" void run_baseline_kernel(', baseline)
+        self.assertIn("LocalTensor<float>", optimized)
+        self.assertNotRegex(optimized, r"ReduceSum\s*<\s*(half|bfloat16_t)")
+        self.assertIn("DataCopyPad", optimized)
+
 
 if __name__ == "__main__":
     unittest.main()
