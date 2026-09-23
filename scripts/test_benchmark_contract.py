@@ -55,6 +55,16 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertNotRegex(optimized, r"ReduceSum\s*<\s*(half|bfloat16_t)")
         self.assertIn("DataCopyPad", optimized)
 
+    def test_microbenchmark_entry_points_are_complete(self):
+        source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
+            encoding="utf-8"
+        )
+        for name in ("launch_noop_benchmark", "launch_gm_copy_benchmark",
+                     "launch_vector_benchmark", "launch_reduction_benchmark"):
+            self.assertIn(name, source)
+        self.assertIn("DataCopyPad", source)
+        self.assertIn("LocalTensor<float>", source)
+
 
 if __name__ == "__main__":
     unittest.main()
