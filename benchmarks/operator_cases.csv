@@ -1,0 +1,10 @@
+rows,hidden,dtypes,purpose
+1,64,fp16|bf16|fp32,launch_floor
+32768,64,fp16|bf16|fp32,small_row_throughput
+1024,192,fp16|bf16|fp32,unaligned_model_width
+1024,576,fp16|bf16|fp32,unaligned_large_width
+128,4095,fp16|bf16|fp32,left_reduction_boundary
+128,4096,fp16|bf16|fp32,aligned_llm_width
+128,4097,fp16|bf16|fp32,right_reduction_boundary
+32,8192,fp16|bf16|fp32,large_row
+8,32768,fp16|bf16|fp32,max_hidden

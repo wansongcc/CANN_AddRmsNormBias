@@ -1,0 +1,49 @@
+import math
+import pathlib
+import sys
+import tempfile
+import unittest
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+
+from benchmark_schema import RESULT_FIELDS, load_operator_cases, validate_result_rows
+
+
+class BenchmarkContractTest(unittest.TestCase):
+    def test_default_matrix_contains_boundary_and_small_row_cases(self):
+        cases = load_operator_cases(ROOT / "benchmarks" / "operator_cases.csv")
+        keys = {(c.rows, c.hidden) for c in cases}
+        self.assertTrue({(1, 64), (32768, 64), (128, 4095),
+                         (128, 4096), (128, 4097), (8, 32768)} <= keys)
+        self.assertEqual({"fp16", "bf16", "fp32"},
+                         {dtype for c in cases for dtype in c.dtypes})
+
+    def test_invalid_case_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "cases.csv"
+            path.write_text("rows,hidden,dtypes,purpose\n0,63,int8,bad\n",
+                            encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "rows.*positive|hidden.*64|dtype"):
+                load_operator_cases(path)
+
+    def test_result_contract_rejects_missing_nonfinite_and_duplicate_rows(self):
+        valid = {field: "" for field in RESULT_FIELDS}
+        valid.update({"suite": "launch", "variant": "micro", "dtype": "",
+                      "rows": "1", "hidden": "1", "elements": "1",
+                      "device": "0", "soc": "dav-2201", "vector_cores": "40",
+                      "warmup": "100", "iterations": "1000",
+                      "latency_us_min": "1.0", "latency_us_p50": "1.1",
+                      "latency_us_p90": "1.2", "logical_bytes": "4",
+                      "effective_gbps": "", "gelements_per_s": "",
+                      "checksum": "1", "status": "PASS"})
+        validate_result_rows([valid])
+        invalid = dict(valid, latency_us_p50=str(math.inf))
+        with self.assertRaisesRegex(ValueError, "finite"):
+            validate_result_rows([invalid])
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            validate_result_rows([valid, dict(valid)])
+
+
+if __name__ == "__main__":
+    unittest.main()
