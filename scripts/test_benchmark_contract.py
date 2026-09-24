@@ -54,6 +54,8 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("LocalTensor<float>", optimized)
         self.assertNotRegex(optimized, r"ReduceSum\s*<\s*(half|bfloat16_t)")
         self.assertIn("DataCopyPad", optimized)
+        self.assertIn("tileElements = tileLimit", optimized)
+        self.assertIn("maxBatchRows = tileElements_ / hiddenSize_", optimized)
 
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
@@ -89,6 +91,14 @@ class BenchmarkContractTest(unittest.TestCase):
         )
         self.assertIn("aclrtGetDeviceCount", runner)
         self.assertIn("logical device index", runner)
+
+        focus = (ROOT / "benchmarks" / "run_focus.sh").read_text(
+            encoding="utf-8"
+        )
+        for shape in ("32768 64", "128 4096", "8 32768"):
+            self.assertIn(shape, focus)
+        self.assertIn("verify_result.py", focus)
+        self.assertIn("baseline optimized", focus)
 
     def test_readme_documents_hardware_run_and_submission_artifact(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -67,6 +67,15 @@ chmod +x run.sh benchmarks/run_benchmarks.sh
 
 计时使用同一 stream 上的 ACL Event。默认先预热 100 次，然后采集 10 批、每批 1000 次，输出 `min/p50/p90`。内存分配、H2D、D2H、文件 I/O 和结果验证不计入设备时延。
 
+只验证当前 kernel 优化时，运行缩减后的 FP16/FP32 聚焦测试：
+
+```bash
+./benchmarks/run_focus.sh --device 0 --warmup 30 --iterations 200
+```
+
+该脚本只测试 `32768x64`、`128x4096` 和 `8x32768` 的
+baseline/optimized，输出 `focus_results.csv` 和 `focus_report.md`。
+
 原始数据保存在 `benchmark_results.csv`。再次生成报告：
 
 ```bash
