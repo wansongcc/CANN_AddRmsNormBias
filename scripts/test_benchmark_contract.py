@@ -65,6 +65,12 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("DataCopyPad", source)
         self.assertIn("LocalTensor<float>", source)
 
+        runner = (ROOT / "benchmarks" / "benchmark_main.asc").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("reinterpret_cast<GM_ADDR>", runner)
+        self.assertIn("(GM_ADDR)input.get()", runner)
+
     def test_runner_is_release_safe_and_checks_environment(self):
         source = (ROOT / "benchmarks" / "run_benchmarks.sh").read_text(
             encoding="utf-8"
