@@ -65,6 +65,17 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("DataCopyPad", source)
         self.assertIn("LocalTensor<float>", source)
 
+    def test_runner_is_release_safe_and_checks_environment(self):
+        source = (ROOT / "benchmarks" / "run_benchmarks.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("set -euo pipefail", source)
+        self.assertIn("CMAKE_BUILD_TYPE=Release", source)
+        self.assertIn("ASCEND_HOME_PATH", source)
+        self.assertIn("operator_cases.csv", source)
+        self.assertIn("verify_result.py", source)
+        self.assertIn("analyze_results.py", source)
+
 
 if __name__ == "__main__":
     unittest.main()

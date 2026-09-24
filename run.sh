@@ -1,46 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "${SCRIPT_DIR}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
 
-OP_NAME="add_rms_norm_bias_custom"
-
-if [ -z "${ASCEND_HOME_PATH:-}" ]; then
-    echo "ERROR: ASCEND_HOME_PATH is not set. Please run:"
-    echo "  source /usr/local/Ascend/ascend-toolkit/set_env.sh"
-    echo "or set ASCEND_HOME_PATH to your CANN toolkit path."
+: "${ASCEND_HOME_PATH:?ASCEND_HOME_PATH is not set; source the CANN set_env.sh first}"
+[[ -f "${ASCEND_HOME_PATH}/set_env.sh" ]] || {
+    echo "CANN environment script not found: ${ASCEND_HOME_PATH}/set_env.sh" >&2
     exit 1
-fi
-
-echo "=== [1/4] Set CANN env ==="
+}
 source "${ASCEND_HOME_PATH}/set_env.sh"
 
-echo "=== [2/4] Build ==="
-rm -rf build
-mkdir -p build
-cd build
-cmake ..
-make -j4
-cd ..
+device="${DEVICE_ID:-0}"
+soc="${NPU_ARCH:-dav-2201}"
+case_dir="${ROOT_DIR}/build/quick_case"
 
-echo "=== [3/4] Gen test data ==="
-cd build
-python3 ../scripts/gen_data.py
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNPU_ARCH="${soc}"
+cmake --build build -j"$(nproc)"
 
-echo "=== [4/4] Run + Verify ==="
-rm -f input/*.bin
-cp input/case0/* input/ 2>/dev/null || true
-cp output/golden_case0/* output/ 2>/dev/null || true
-find output -name '*.bin' ! -name 'golden_*' -delete 2>/dev/null || true
-if timeout 120 "./${OP_NAME}"; then
-    if python3 ../scripts/verify_result.py 0; then
-        echo "=== PASSED ==="
-    else
-        echo "=== FAILED ==="
-        exit 1
-    fi
-else
-    echo "=== FAILED (kernel exited non-zero or timed out) ==="
-    exit 1
-fi
+python3 scripts/gen_data.py --rows 1 --hidden 64 --dtype fp16 \
+    --epsilon 1e-5 --seed 42 --output-dir "${case_dir}"
+
+build/add_rms_norm_bias_benchmark --suite operator --variant optimized \
+    --dtype fp16 --rows 1 --hidden 64 --device "${device}" \
+    --input-dir "${case_dir}" --validate-only
+
+python3 scripts/verify_result.py \
+    --actual "${case_dir}/actual_output.bin" \
+    --golden "${case_dir}/golden_output.bin" --dtype fp16
+
+echo "=== PASSED: AddRmsNormBias quick correctness check ==="
