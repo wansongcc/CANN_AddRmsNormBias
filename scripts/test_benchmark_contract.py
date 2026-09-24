@@ -81,6 +81,14 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("operator_cases.csv", source)
         self.assertIn("verify_result.py", source)
         self.assertIn("analyze_results.py", source)
+        self.assertIn('compgen -G "/dev/davinci[0-9]*"', source)
+        self.assertNotIn('[[ -e "/dev/davinci${device}" ]]', source)
+
+        runner = (ROOT / "benchmarks" / "benchmark_main.asc").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("aclrtGetDeviceCount", runner)
+        self.assertIn("logical device index", runner)
 
     def test_readme_documents_hardware_run_and_submission_artifact(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

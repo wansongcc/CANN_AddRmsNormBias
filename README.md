@@ -51,6 +51,11 @@ chmod +x run.sh benchmarks/run_benchmarks.sh
   --warmup 100 --iterations 1000 --output benchmark_results.csv
 ```
 
+`--device` 使用 ACL Runtime 的逻辑编号，取值范围是
+`0..aclrtGetDeviceCount()-1`。它不是容器内 `/dev/davinciN` 的 `N`；例如容器
+只挂载 `/dev/davinci8` 和 `/dev/davinci9` 时，两个可见设备的逻辑编号通常为
+`0` 和 `1`。
+
 脚本会执行：
 
 1. launch 固定开销测试；

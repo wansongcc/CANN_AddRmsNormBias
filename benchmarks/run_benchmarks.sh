@@ -46,8 +46,8 @@ done
 source "${ASCEND_HOME_PATH}/set_env.sh"
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 command -v cmake >/dev/null || { echo "cmake is required" >&2; exit 1; }
-[[ -e "/dev/davinci${device}" ]] || {
-    echo "Ascend device node not found: /dev/davinci${device}" >&2
+compgen -G "/dev/davinci[0-9]*" >/dev/null || {
+    echo "No Ascend compute device nodes found under /dev" >&2
     exit 1
 }
 
