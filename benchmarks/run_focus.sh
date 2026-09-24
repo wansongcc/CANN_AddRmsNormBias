@@ -52,7 +52,7 @@ with path.open("w", newline="", encoding="utf-8") as handle:
 PY
 }
 
-cases=("32768 64" "128 4096" "1 32768" "2 32768" "4 32768" "8 32768")
+cases=("32768 64" "1024 192" "1024 576" "128 4096" "8 32768")
 for dtype in fp16 fp32; do
     for shape in "${cases[@]}"; do
         read -r rows hidden <<<"${shape}"

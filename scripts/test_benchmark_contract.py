@@ -56,9 +56,27 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("DataCopyPad", optimized)
         self.assertIn("tileElements = tileLimit", optimized)
         self.assertIn("maxBatchRows = tileElements_ / hiddenSize_", optimized)
-        self.assertIn("workersPerRow", optimized)
-        self.assertIn("ProcessSplitRow", optimized)
-        self.assertIn("workerIndex_", optimized)
+
+    def test_row_batch_covers_medium_hidden_sizes_and_two_rows_per_core(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        self.assertIn("const bool useRowBatch =", optimized)
+        self.assertIn("hiddenSize <= tileLimit / 2", optimized)
+        self.assertIn("rowCount >= 2ULL * blockNum", optimized)
+        self.assertIn("tileElements_ / hiddenSize_ >= 2", optimized)
+        self.assertIn("rowsForCore_ >= 2", optimized)
+
+    def test_row_batch_squares_the_batch_before_reducing_row_views(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        batch_mul = "AscendC::Mul(scratchLocal, yLocal, yLocal, batchElements);"
+        row_view = "auto squareRow = scratchLocal[rowOffset];"
+        self.assertIn(batch_mul, optimized)
+        self.assertIn(row_view, optimized)
+        self.assertRegex(
+            optimized,
+            r"AscendC::ReduceSum<float>\(squareRow, squareRow,\s*"
+            r"workLocal, hiddenSize_\);",
+        )
+        self.assertLess(optimized.index(batch_mul), optimized.index(row_view))
 
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
@@ -98,8 +116,8 @@ class BenchmarkContractTest(unittest.TestCase):
         focus = (ROOT / "benchmarks" / "run_focus.sh").read_text(
             encoding="utf-8"
         )
-        for shape in ("32768 64", "128 4096", "1 32768", "2 32768",
-                      "4 32768", "8 32768"):
+        for shape in ("32768 64", "1024 192", "1024 576", "128 4096",
+                      "8 32768"):
             self.assertIn(shape, focus)
         self.assertIn("verify_result.py", focus)
         self.assertIn("baseline optimized", focus)
