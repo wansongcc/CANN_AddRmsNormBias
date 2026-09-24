@@ -78,6 +78,22 @@ class BenchmarkContractTest(unittest.TestCase):
         )
         self.assertLess(optimized.index(batch_mul), optimized.index(row_view))
 
+    def test_row_batch_converts_gamma_and_bias_once_per_batch(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        self.assertIn("inline void ApplyGammaBiasBatch", optimized)
+        batch_helper = optimized[
+            optimized.index("inline void ApplyGammaBiasBatch"):
+            optimized.index("class KernelAddRmsNormBias")
+        ]
+        row_batch = optimized[
+            optimized.index("inline void ProcessSmallRows"):
+            optimized.index("inline void WriteSingleTile")
+        ]
+        self.assertEqual(1, batch_helper.count("ConvertToFloat(tmp, gamma"))
+        self.assertEqual(1, batch_helper.count("ConvertToFloat(tmp, bias"))
+        self.assertIn("ApplyGammaBiasBatch(yLocal", row_batch)
+        self.assertNotIn("ApplyGammaBias(yRow", row_batch)
+
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
             encoding="utf-8"
