@@ -76,6 +76,14 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("verify_result.py", source)
         self.assertIn("analyze_results.py", source)
 
+    def test_readme_documents_hardware_run_and_submission_artifact(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("./run.sh", readme)
+        self.assertIn("./benchmarks/run_benchmarks.sh", readme)
+        self.assertIn("--warmup 100 --iterations 1000", readme)
+        self.assertIn("benchmark_results.csv", readme)
+        self.assertIn("kernel.asc", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
