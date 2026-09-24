@@ -56,6 +56,9 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("DataCopyPad", optimized)
         self.assertIn("tileElements = tileLimit", optimized)
         self.assertIn("maxBatchRows = tileElements_ / hiddenSize_", optimized)
+        self.assertIn("workersPerRow", optimized)
+        self.assertIn("ProcessSplitRow", optimized)
+        self.assertIn("workerIndex_", optimized)
 
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
@@ -95,7 +98,8 @@ class BenchmarkContractTest(unittest.TestCase):
         focus = (ROOT / "benchmarks" / "run_focus.sh").read_text(
             encoding="utf-8"
         )
-        for shape in ("32768 64", "128 4096", "8 32768"):
+        for shape in ("32768 64", "128 4096", "1 32768", "2 32768",
+                      "4 32768", "8 32768"):
             self.assertIn(shape, focus)
         self.assertIn("verify_result.py", focus)
         self.assertIn("baseline optimized", focus)
