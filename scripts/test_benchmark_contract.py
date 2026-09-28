@@ -94,6 +94,29 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("ApplyGammaBiasBatch(yLocal", row_batch)
         self.assertNotIn("ApplyGammaBias(yRow", row_batch)
 
+    def test_row_batch_reduces_and_computes_scales_as_a_batch(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        self.assertIn("inline void ComputeBatchScales", optimized)
+        batch_scale = optimized[
+            optimized.index("inline void ComputeBatchScales"):
+            optimized.index("inline void ProcessSmallRows")
+        ]
+        row_batch = optimized[
+            optimized.index("inline void ProcessSmallRows"):
+            optimized.index("inline void WriteSingleTile")
+        ]
+        self.assertIn(
+            "workLocal.SetValue(row, squareRow.GetValue(0))", batch_scale
+        )
+        for operation in ("Muls", "Adds", "Sqrt", "Div"):
+            self.assertRegex(
+                batch_scale,
+                rf"AscendC::{operation}\([^;]*batchRows\);",
+            )
+        self.assertIn("ComputeBatchScales(scratchLocal, workLocal, batchRows)",
+                      row_batch)
+        self.assertNotIn("ComputeScale(squareRow.GetValue(0))", row_batch)
+
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
             encoding="utf-8"
