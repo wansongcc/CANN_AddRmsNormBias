@@ -129,6 +129,37 @@ class BenchmarkContractTest(unittest.TestCase):
                       row_batch)
         self.assertNotIn("ComputeScale(squareRow.GetValue(0))", row_batch)
 
+    def test_non_batch_tiles_use_hierarchical_hardware_reduction(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        reduction = optimized[
+            optimized.index("inline float ReduceTileChunk"):
+            optimized.index("inline float ReduceTile(")
+        ]
+        row_tile = optimized[
+            optimized.index("inline float ReduceTile("):
+            optimized.index("inline float ComputeScale")
+        ]
+        row_batch = optimized[
+            optimized.index("inline void ProcessSmallRows"):
+            optimized.index("inline void WriteSingleTile")
+        ]
+        self.assertIn("BlockReduceSum<float, false>", reduction)
+        self.assertIn("WholeReduceSum<float, false>", reduction)
+        self.assertIn(
+            "workLocal, sourceLocal, 1, AscendC::MASK_PLACEHOLDER",
+            reduction,
+        )
+        self.assertIn(
+            "sourceLocal, workLocal, AscendC::MASK_PLACEHOLDER,\n"
+            "            1, 1, 1, 8",
+            reduction,
+        )
+        self.assertIn("PipeBarrier<PIPE_V>", reduction)
+        self.assertNotIn("ReduceSum<float>", row_tile)
+        self.assertIn("ReduceTileChunk(squareChunk, workLocal, count)",
+                      row_tile)
+        self.assertIn("ReduceSum<float>", row_batch)
+
     def test_microbenchmark_entry_points_are_complete(self):
         source = (ROOT / "benchmarks" / "micro_kernels.asc").read_text(
             encoding="utf-8"
