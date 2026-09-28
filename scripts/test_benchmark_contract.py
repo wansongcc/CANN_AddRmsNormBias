@@ -94,6 +94,18 @@ class BenchmarkContractTest(unittest.TestCase):
         self.assertIn("ApplyGammaBiasBatch(yLocal", row_batch)
         self.assertNotIn("ApplyGammaBias(yRow", row_batch)
 
+    def test_row_batch_reuses_parameter_segments_across_rows(self):
+        optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
+        helper = optimized[
+            optimized.index("inline void ApplyParameterBatch"):
+            optimized.index("class KernelAddRmsNormBias")
+        ]
+        self.assertIn("BinaryRepeatParams", helper)
+        self.assertIn("parameterRepStride = 0", helper)
+        self.assertIn("static_cast<uint8_t>(batchRows)", helper)
+        self.assertIn("ApplyParameterBatch<true>", optimized)
+        self.assertIn("ApplyParameterBatch<false>", optimized)
+
     def test_row_batch_reduces_and_computes_scales_as_a_batch(self):
         optimized = (ROOT / "kernel.asc").read_text(encoding="utf-8")
         self.assertIn("inline void ComputeBatchScales", optimized)
